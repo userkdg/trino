@@ -574,6 +574,12 @@ public final class StandardColumnMappings
         return (resultSet, columnIndex) -> toTrinoTimestamp(timestampType, resultSet.getObject(columnIndex, LocalDateTime.class));
     }
 
+    public static LongReadFunction timestampReadFunctionForStarRocks(TimestampType timestampType)
+    {
+        checkArgument(timestampType.getPrecision() <= TimestampType.MAX_SHORT_PRECISION, "Precision is out of range: %s", timestampType.getPrecision());
+        return (resultSet, columnIndex) -> toTrinoTimestampForStarRocks(timestampType, resultSet.getObject(columnIndex, LocalDateTime.class));
+    }
+
     public static ObjectReadFunction longTimestampReadFunction(TimestampType timestampType)
     {
         checkArgument(timestampType.getPrecision() > TimestampType.MAX_SHORT_PRECISION && timestampType.getPrecision() <= MAX_LOCAL_DATE_TIME_PRECISION,
@@ -614,6 +620,15 @@ public final class StandardColumnMappings
         return ObjectWriteFunction.of(
                 LongTimestamp.class,
                 (statement, index, value) -> statement.setObject(index, fromLongTrinoTimestamp(value, roundToPrecision)));
+    }
+
+    public static long toTrinoTimestampForStarRocks(TimestampType timestampType, LocalDateTime localDateTime)
+    {
+        long precision = timestampType.getPrecision();
+        checkArgument(precision <= TimestampType.MAX_SHORT_PRECISION, "Precision is out of range: %s", precision);
+        long epochMicros = localDateTime.toEpochSecond(UTC) * MICROSECONDS_PER_SECOND
+                + localDateTime.getNano() / NANOSECONDS_PER_MICROSECOND;
+        return round(epochMicros, TimestampType.MAX_SHORT_PRECISION - timestampType.getPrecision());
     }
 
     public static long toTrinoTimestamp(TimestampType timestampType, LocalDateTime localDateTime)

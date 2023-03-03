@@ -111,7 +111,7 @@
         <module>core/trino-server-main</module>
         <module>core/trino-server-rpm</module>
         <module>core/trino-spi</module>
-        <module>docs</module>
+<!--        <module>docs</module>-->
         <module>lib/trino-array</module>
         <module>lib/trino-collect</module>
         <module>lib/trino-filesystem</module>
@@ -173,6 +173,7 @@
         <module>plugin/trino-session-property-managers</module>
         <module>plugin/trino-singlestore</module>
         <module>plugin/trino-sqlserver</module>
+        <module>plugin/trino-starrocks</module>
         <module>plugin/trino-teradata-functions</module>
         <module>plugin/trino-thrift</module>
         <module>plugin/trino-thrift-api</module>

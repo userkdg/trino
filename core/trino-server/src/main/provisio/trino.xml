@@ -146,6 +146,12 @@
         </artifact>
     </artifactSet>
 
+    <artifactSet to="plugin/starrocks">
+        <artifact id="${project.groupId}:trino-starrocks:zip:${project.version}">
+            <unpack />
+        </artifact>
+    </artifactSet>
+
     <artifactSet to="plugin/oracle">
         <artifact id="${project.groupId}:trino-oracle:zip:${project.version}">
             <unpack />
