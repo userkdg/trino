@@ -538,6 +538,7 @@ jobs:
             - { modules: plugin/trino-redis }
             - { modules: plugin/trino-singlestore }
             - { modules: plugin/trino-sqlserver }
+            - { modules: plugin/trino-starrocks }
             - { modules: testing/trino-faulttolerant-tests, profile: default }
             - { modules: plugin/trino-delta-lake, profile: fte-tests }
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-delta }
@@ -549,6 +550,7 @@ jobs:
             - { modules: plugin/trino-mongodb, profile: fte-tests }
             - { modules: plugin/trino-mysql, profile: fte-tests }
             - { modules: plugin/trino-sqlserver, profile: fte-tests }
+            - { modules: plugin/trino-starrocks, profile: fte-tests }
             - { modules: testing/trino-tests }
           EOF
           ./.github/bin/build-matrix-from-impacted.py -v -i gib-impacted.log -m .github/test-matrix.yaml -o matrix.json
