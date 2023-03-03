@@ -13,13 +13,28 @@
  */
 package io.trino.plugin.mysql;
 
-import io.trino.plugin.jdbc.JdbcPlugin;
-
-public class StarRocksPlugin
-        extends JdbcPlugin
+/**
+ * olap|mysql|elasticsearch|hive|iceberg|hudi|jdbc
+ */
+public enum StarRocksEngineType
 {
-    public StarRocksPlugin()
+    OLAP("olap"),
+    MYSQL("mysql"),
+    ELASTICSEARCH("elasticsearch"),
+    HIVE("hive"),
+    ICEBERG("iceberg"),
+    HUDI("hudi"),
+    jdbc("jdbc");
+
+    private final String engineType;
+
+    StarRocksEngineType(String engineType)
     {
-        super("starrocks", new StarRocksClientModule());
+        this.engineType = engineType;
+    }
+
+    public String getEngineType()
+    {
+        return this.engineType;
     }
 }

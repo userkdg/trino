@@ -24,12 +24,12 @@ import static io.airlift.configuration.testing.ConfigAssertions.assertFullMappin
 import static io.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
 import static io.airlift.configuration.testing.ConfigAssertions.recordDefaults;
 
-public class TestMySqlConfig
+public class TestStarRocksConfig
 {
     @Test
     public void testDefaults()
     {
-        assertRecordedDefaults(recordDefaults(MySqlConfig.class)
+        assertRecordedDefaults(recordDefaults(StarRocksConfig.class)
                 .setAutoReconnect(true)
                 .setMaxReconnects(3)
                 .setConnectionTimeout(new Duration(10, TimeUnit.SECONDS))
@@ -46,7 +46,7 @@ public class TestMySqlConfig
                 .put("mysql.jdbc.use-information-schema", "false")
                 .buildOrThrow();
 
-        MySqlConfig expected = new MySqlConfig()
+        StarRocksConfig expected = new StarRocksConfig()
                 .setAutoReconnect(false)
                 .setMaxReconnects(4)
                 .setConnectionTimeout(new Duration(4, TimeUnit.SECONDS))

@@ -37,15 +37,15 @@ import java.util.Properties;
 import static com.google.inject.multibindings.Multibinder.newSetBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
 
-public class MySqlClientModule
+public class StarRocksClientModule
         extends AbstractConfigurationAwareModule
 {
     @Override
     protected void setup(Binder binder)
     {
-        binder.bind(JdbcClient.class).annotatedWith(ForBaseJdbc.class).to(MySqlClient.class).in(Scopes.SINGLETON);
-        configBinder(binder).bindConfig(MySqlJdbcConfig.class);
-        configBinder(binder).bindConfig(MySqlConfig.class);
+        binder.bind(JdbcClient.class).annotatedWith(ForBaseJdbc.class).to(StarRocksClient.class).in(Scopes.SINGLETON);
+        configBinder(binder).bindConfig(StarRocksJdbcConfig.class);
+        configBinder(binder).bindConfig(StarRocksConfig.class);
         configBinder(binder).bindConfig(JdbcStatisticsConfig.class);
         install(new DecimalModule());
         install(new JdbcJoinPushdownSupportModule());
@@ -55,20 +55,20 @@ public class MySqlClientModule
     @Provides
     @Singleton
     @ForBaseJdbc
-    public static ConnectionFactory createConnectionFactory(BaseJdbcConfig config, CredentialProvider credentialProvider, MySqlConfig mySqlConfig)
+    public static ConnectionFactory createConnectionFactory(BaseJdbcConfig config, CredentialProvider credentialProvider, StarRocksConfig starRocksConfig)
             throws SQLException
     {
         return new DriverConnectionFactory(
                 new Driver(),
                 config.getConnectionUrl(),
-                getConnectionProperties(mySqlConfig),
+                getConnectionProperties(starRocksConfig),
                 credentialProvider);
     }
 
-    public static Properties getConnectionProperties(MySqlConfig mySqlConfig)
+    public static Properties getConnectionProperties(StarRocksConfig starRocksConfig)
     {
         Properties connectionProperties = new Properties();
-        connectionProperties.setProperty("useInformationSchema", Boolean.toString(mySqlConfig.isDriverUseInformationSchema()));
+        connectionProperties.setProperty("useInformationSchema", Boolean.toString(starRocksConfig.isDriverUseInformationSchema()));
         connectionProperties.setProperty("useUnicode", "true");
         connectionProperties.setProperty("characterEncoding", "utf8");
         connectionProperties.setProperty("tinyInt1isBit", "false");
@@ -80,12 +80,12 @@ public class MySqlClientModule
         //  with MySQL server with a non-UTC system zone.
         connectionProperties.setProperty("connectionTimeZone", "UTC");
 
-        if (mySqlConfig.isAutoReconnect()) {
-            connectionProperties.setProperty("autoReconnect", String.valueOf(mySqlConfig.isAutoReconnect()));
-            connectionProperties.setProperty("maxReconnects", String.valueOf(mySqlConfig.getMaxReconnects()));
+        if (starRocksConfig.isAutoReconnect()) {
+            connectionProperties.setProperty("autoReconnect", String.valueOf(starRocksConfig.isAutoReconnect()));
+            connectionProperties.setProperty("maxReconnects", String.valueOf(starRocksConfig.getMaxReconnects()));
         }
-        if (mySqlConfig.getConnectionTimeout() != null) {
-            connectionProperties.setProperty("connectTimeout", String.valueOf(mySqlConfig.getConnectionTimeout().toMillis()));
+        if (starRocksConfig.getConnectionTimeout() != null) {
+            connectionProperties.setProperty("connectTimeout", String.valueOf(starRocksConfig.getConnectionTimeout().toMillis()));
         }
         return connectionProperties;
     }

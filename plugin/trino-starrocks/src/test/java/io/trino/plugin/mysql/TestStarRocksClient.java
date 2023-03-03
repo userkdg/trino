@@ -43,7 +43,7 @@ import static io.trino.type.InternalTypeManager.TESTING_TYPE_MANAGER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.testng.Assert.assertTrue;
 
-public class TestMySqlClient
+public class TestStarRocksClient
 {
     private static final JdbcColumnHandle BIGINT_COLUMN =
             JdbcColumnHandle.builder()
@@ -59,7 +59,7 @@ public class TestMySqlClient
                     .setJdbcTypeHandle(new JdbcTypeHandle(Types.DOUBLE, Optional.of("double"), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()))
                     .build();
 
-    private static final JdbcClient JDBC_CLIENT = new MySqlClient(
+    private static final JdbcClient JDBC_CLIENT = new StarRocksClient(
             new BaseJdbcConfig(),
             new JdbcStatisticsConfig(),
             session -> {
