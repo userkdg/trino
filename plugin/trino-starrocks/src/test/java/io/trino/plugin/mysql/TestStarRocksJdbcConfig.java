@@ -18,7 +18,7 @@ import org.testng.annotations.Test;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class TestMySqlJdbcConfig
+public class TestStarRocksJdbcConfig
 {
     @Test
     public void testIsUrlWithoutDatabase()
@@ -30,7 +30,7 @@ public class TestMySqlJdbcConfig
 
     private static boolean isUrlWithoutDatabase(String url)
     {
-        MySqlJdbcConfig config = new MySqlJdbcConfig();
+        StarRocksJdbcConfig config = new StarRocksJdbcConfig();
         config.setConnectionUrl(url);
         return config.isUrlWithoutDatabase();
     }

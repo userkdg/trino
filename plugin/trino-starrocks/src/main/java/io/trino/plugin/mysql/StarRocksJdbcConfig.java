@@ -24,7 +24,7 @@ import java.sql.SQLException;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.mysql.cj.conf.ConnectionUrlParser.parseConnectionString;
 
-public class MySqlJdbcConfig
+public class StarRocksJdbcConfig
         extends BaseJdbcConfig
 {
     @AssertTrue(message = "Invalid JDBC URL for MySQL connector")

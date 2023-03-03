@@ -13,12 +13,9 @@
  */
 package io.trino.plugin.mysql;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mysql.cj.jdbc.JdbcStatement;
-import io.airlift.json.JsonCodec;
 import io.airlift.log.Logger;
 import io.trino.plugin.base.aggregation.AggregateFunctionRewriter;
 import io.trino.plugin.base.aggregation.AggregateFunctionRule;
@@ -66,19 +63,9 @@ import io.trino.spi.statistics.ColumnStatistics;
 import io.trino.spi.statistics.DoubleRange;
 import io.trino.spi.statistics.Estimate;
 import io.trino.spi.statistics.TableStatistics;
-import io.trino.spi.type.CharType;
-import io.trino.spi.type.DecimalType;
-import io.trino.spi.type.Decimals;
-import io.trino.spi.type.StandardTypes;
-import io.trino.spi.type.TimeType;
-import io.trino.spi.type.TimestampType;
-import io.trino.spi.type.Type;
-import io.trino.spi.type.TypeManager;
-import io.trino.spi.type.TypeSignature;
-import io.trino.spi.type.VarcharType;
+import io.trino.spi.type.*;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
-import org.jdbi.v3.core.statement.UnableToExecuteStatementException;
 
 import javax.inject.Inject;
 
@@ -86,11 +73,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.SQLSyntaxErrorException;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -100,15 +85,12 @@ import java.util.stream.Stream;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Strings.emptyToNull;
 import static com.google.common.base.Throwables.throwIfInstanceOf;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
-import static com.mysql.cj.exceptions.MysqlErrorNumbers.ER_UNKNOWN_TABLE;
 import static com.mysql.cj.exceptions.MysqlErrorNumbers.SQL_STATE_ER_TABLE_EXISTS_ERROR;
-import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.airlift.slice.Slices.utf8Slice;
 import static io.trino.plugin.base.util.JsonTypeUtil.jsonParse;
 import static io.trino.plugin.jdbc.DecimalConfig.DecimalMapping.ALLOW_OVERFLOW;
@@ -122,8 +104,7 @@ import static io.trino.plugin.jdbc.PredicatePushdownController.FULL_PUSHDOWN;
 import static io.trino.plugin.jdbc.StandardColumnMappings.*;
 import static io.trino.plugin.jdbc.TypeHandlingJdbcSessionProperties.getUnsupportedTypeHandling;
 import static io.trino.plugin.jdbc.UnsupportedTypeHandling.CONVERT_TO_VARCHAR;
-import static io.trino.spi.StandardErrorCode.ALREADY_EXISTS;
-import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
+import static io.trino.spi.StandardErrorCode.*;
 import static io.trino.spi.type.BigintType.BIGINT;
 import static io.trino.spi.type.BooleanType.BOOLEAN;
 import static io.trino.spi.type.DateType.DATE;
@@ -137,27 +118,24 @@ import static io.trino.spi.type.TimestampType.createTimestampType;
 import static io.trino.spi.type.TinyintType.TINYINT;
 import static io.trino.spi.type.VarbinaryType.VARBINARY;
 import static java.lang.Float.floatToRawIntBits;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 import static java.lang.String.format;
-import static java.lang.String.join;
 import static java.time.format.DateTimeFormatter.ISO_DATE;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 
-public class MySqlClient
+public class StarRocksClient
         extends BaseJdbcClient
 {
-    private static final Logger log = Logger.get(MySqlClient.class);
+    private static final Logger log = Logger.get(StarRocksClient.class);
 
     private static final int MAX_SUPPORTED_DATE_TIME_PRECISION = 6;
-    // MySQL driver returns width of timestamp types instead of precision.
+    // StarRocks(MySQL) driver returns width of timestamp types instead of precision.
     // 19 characters are used for zero-precision timestamps while others
     // require 19 + precision + 1 characters with the additional character
     // required for the decimal separator.
     private static final int ZERO_PRECISION_TIMESTAMP_COLUMN_SIZE = 19;
-    // MySQL driver returns width of time types instead of precision, same as the above timestamp type.
+    // StarRocks(MySQL) driver returns width of time types instead of precision, same as the above timestamp type.
     private static final int ZERO_PRECISION_TIME_COLUMN_SIZE = 8;
 
     // An empty character means that the table doesn't have a comment in MySQL
@@ -168,7 +146,7 @@ public class MySqlClient
     private final AggregateFunctionRewriter<JdbcExpression, String> aggregateFunctionRewriter;
 
     @Inject
-    public MySqlClient(
+    public StarRocksClient(
             BaseJdbcConfig config,
             JdbcStatisticsConfig statisticsConfig,
             ConnectionFactory connectionFactory,
@@ -192,7 +170,7 @@ public class MySqlClient
                         .add(new ImplementCountAll(bigintTypeHandle))
                         .add(new ImplementCount(bigintTypeHandle))
                         .add(new ImplementMinMax(false))
-                        .add(new ImplementSum(MySqlClient::toTypeHandle))
+                        .add(new ImplementSum(StarRocksClient::toTypeHandle))
                         .add(new ImplementAvgFloatingPoint())
                         .add(new ImplementAvgDecimal())
                         .add(new ImplementAvgBigint())
@@ -257,7 +235,7 @@ public class MySqlClient
             throws SQLException
     {
         if (!resultSet.isAfterLast()) {
-            // Abort connection before closing. Without this, the MySQL driver
+            // Abort connection before closing. Without this, the StarRocks(MySQL) driver
             // attempts to drain the connection by reading all the results.
             connection.abort(directExecutor());
         }
@@ -328,15 +306,14 @@ public class MySqlClient
     protected String getTableSchemaName(ResultSet resultSet)
             throws SQLException
     {
-        // MySQL uses catalogs instead of schemas
+        // StarRocks(MySQL) uses catalogs instead of schemas
         return resultSet.getString("TABLE_CAT");
     }
 
     @Override
     protected String createTableSql(RemoteTableName remoteTableName, List<String> columns, ConnectorTableMetadata tableMetadata)
     {
-        checkArgument(tableMetadata.getProperties().isEmpty(), "Unsupported table properties: %s", tableMetadata.getProperties());
-        return format("CREATE TABLE %s (%s) COMMENT %s", quoted(remoteTableName), join(", ", columns), mysqlVarcharLiteral(tableMetadata.getComment().orElse(NO_COMMENT)));
+        throw new TrinoException(NOT_SUPPORTED, "This connector does not support setting createTableSql ");
     }
 
     private static String mysqlVarcharLiteral(String value)
@@ -407,7 +384,7 @@ public class MySqlClient
                     int scale = Math.min(decimalDigits, getDecimalDefaultScale(session));
                     return Optional.of(decimalColumnMapping(createDecimalType(Decimals.MAX_PRECISION, scale), getDecimalRoundingMode(session)));
                 }
-                // TODO does mysql support negative scale?
+                // TODO does StarRocks(MySQL) support negative scale?
                 precision = precision + Math.max(-decimalDigits, 0); // Map decimal(p, -s) (negative scale) to decimal(p+s, 0).
                 if (precision > Decimals.MAX_PRECISION) {
                     break;
@@ -554,16 +531,17 @@ public class MySqlClient
             return WriteMapping.longMapping("smallint", smallintWriteFunction());
         }
         if (type == INTEGER) {
-            return WriteMapping.longMapping("integer", integerWriteFunction());
+            return WriteMapping.longMapping("int", integerWriteFunction());
         }
         if (type == BIGINT) {
             return WriteMapping.longMapping("bigint", bigintWriteFunction());
         }
+        // todo 支持starRocks LARGEINT https://docs.starrocks.io/zh-cn/latest/sql-reference/sql-statements/data-types/LARGEINT#largeint
         if (type == REAL) {
             return WriteMapping.longMapping("float", realWriteFunction());
         }
         if (type == DOUBLE) {
-            return WriteMapping.doubleMapping("double precision", doubleWriteFunction());
+            return WriteMapping.doubleMapping("double", doubleWriteFunction());
         }
 
         if (type instanceof DecimalType decimalType) {
@@ -604,19 +582,9 @@ public class MySqlClient
         if (type instanceof VarcharType varcharType) {
             String dataType;
             if (varcharType.isUnbounded()) {
-                dataType = "longtext";
-            }
-            else if (varcharType.getBoundedLength() <= 255) {
-                dataType = "tinytext";
-            }
-            else if (varcharType.getBoundedLength() <= 65535) {
-                dataType = "text";
-            }
-            else if (varcharType.getBoundedLength() <= 16777215) {
-                dataType = "mediumtext";
-            }
-            else {
-                dataType = "longtext";
+                dataType = "varchar(1048576)";
+            } else {
+                dataType = "varchar(" + varcharType.getLength() + ")";
             }
             return WriteMapping.sliceMapping(dataType, varcharWriteFunction());
         }
@@ -624,7 +592,13 @@ public class MySqlClient
         if (type.equals(jsonType)) {
             return WriteMapping.sliceMapping("json", varcharWriteFunction());
         }
-
+        if (type instanceof ArrayType arrayType){
+            // todo 写入支持array
+            throw new TrinoException(NOT_SUPPORTED, "Unsupported column type: " + arrayType);
+        }
+        if (type instanceof HyperLogLogType){
+            return WriteMapping.sliceMapping("hll hll_union", varcharWriteFunction());
+        }
         throw new TrinoException(NOT_SUPPORTED, "Unsupported column type: " + type.getDisplayName());
     }
 
@@ -641,15 +615,9 @@ public class MySqlClient
     }
 
     @Override
-    protected void renameColumn(ConnectorSession session, Connection connection, RemoteTableName remoteTableName, String remoteColumnName, String newRemoteColumnName)
-            throws SQLException
-    {
-        String sql = format(
-                "ALTER TABLE %s RENAME COLUMN %s TO %s",
-                quoted(remoteTableName.getCatalogName().orElse(null), remoteTableName.getSchemaName().orElse(null), remoteTableName.getTableName()),
-                quoted(remoteColumnName),
-                quoted(newRemoteColumnName));
-        execute(session, connection, sql);
+    protected void renameColumn(ConnectorSession session, Connection connection, RemoteTableName remoteTableName, String remoteColumnName, String newRemoteColumnName) {
+        // https://docs.starrocks.io/zh-cn/latest/sql-reference/sql-statements/data-definition/ALTER%20TABLE#alter-table 注意列名不支持修改。
+        throw new TrinoException(NOT_SUPPORTED, "This connector does not support rename column types");
     }
 
     @Override
@@ -667,6 +635,8 @@ public class MySqlClient
     @Override
     protected void copyTableSchema(ConnectorSession session, Connection connection, String catalogName, String schemaName, String tableName, String newTableName, List<String> columnNames)
     {
+        // https://docs.starrocks.io/zh-cn/latest/sql-reference/sql-statements/data-definition/CREATE%20TABLE%20AS%20SELECT#create-table-as-select
+        // https://docs.starrocks.io/zh-cn/latest/sql-reference/sql-statements/data-definition/CREATE%20TABLE%20AS%20SELECT#create-table-as-select
         String tableCopyFormat = "CREATE TABLE %s AS SELECT * FROM %s WHERE 0 = 1";
         if (isGtidMode(connection)) {
             tableCopyFormat = "CREATE TABLE %s LIKE %s";
@@ -686,11 +656,21 @@ public class MySqlClient
     @Override
     public void renameTable(ConnectorSession session, JdbcTableHandle handle, SchemaTableName newTableName)
     {
-        // MySQL doesn't support specifying the catalog name in a rename. By setting the
+        // StarRocks(MySQL) doesn't support specifying the catalog name in a rename. By setting the
         // catalogName parameter to null, it will be omitted in the ALTER TABLE statement.
         RemoteTableName remoteTableName = handle.asPlainTable().getRemoteTableName();
         verify(remoteTableName.getSchemaName().isEmpty());
         renameTable(session, null, remoteTableName.getCatalogName().orElse(null), remoteTableName.getTableName(), newTableName);
+    }
+
+    @Override
+    protected void renameTable(ConnectorSession session, Connection connection, String catalogName, String remoteSchemaName, String remoteTableName, String newRemoteSchemaName, String newRemoteTableName) throws SQLException
+    {
+        // https://docs.starrocks.io/zh-cn/latest/sql-reference/sql-statements/data-definition/ALTER%20TABLE#%E4%BF%AE%E6%94%B9%E8%A1%A8%E5%90%8D
+        execute(session, connection, format(
+                "ALTER TABLE %s RENAME %s",
+                quoted(catalogName, remoteSchemaName, remoteTableName),
+                quoted(catalogName, newRemoteSchemaName, newRemoteTableName)));
     }
 
     @Override
@@ -721,32 +701,16 @@ public class MySqlClient
     @Override
     protected Optional<TopNFunction> topNFunction()
     {
+        // https://docs.starrocks.io/zh-cn/latest/sql-reference/sql-statements/data-manipulation/SELECT#order-by
         return Optional.of((query, sortItems, limit) -> {
             String orderBy = sortItems.stream()
-                    .flatMap(sortItem -> {
+                    .map(sortItem -> {
                         String ordering = sortItem.getSortOrder().isAscending() ? "ASC" : "DESC";
-                        String columnSorting = format("%s %s", quoted(sortItem.getColumn().getColumnName()), ordering);
-
-                        switch (sortItem.getSortOrder()) {
-                            case ASC_NULLS_FIRST:
-                                // In MySQL ASC implies NULLS FIRST
-                            case DESC_NULLS_LAST:
-                                // In MySQL DESC implies NULLS LAST
-                                return Stream.of(columnSorting);
-
-                            case ASC_NULLS_LAST:
-                                return Stream.of(
-                                        format("ISNULL(%s) ASC", quoted(sortItem.getColumn().getColumnName())),
-                                        columnSorting);
-                            case DESC_NULLS_FIRST:
-                                return Stream.of(
-                                        format("ISNULL(%s) DESC", quoted(sortItem.getColumn().getColumnName())),
-                                        columnSorting);
-                        }
-                        throw new UnsupportedOperationException("Unsupported sort order: " + sortItem.getSortOrder());
+                        String nullsHandling = sortItem.getSortOrder().isNullsFirst() ? "NULLS FIRST" : "NULLS LAST";
+                        return format("%s %s %s", quoted(sortItem.getColumn().getColumnName()), ordering, nullsHandling);
                     })
                     .collect(joining(", "));
-            return format("%s ORDER BY %s LIMIT %s", query, orderBy, limit);
+            return format("%s ORDER BY %s LIMIT %d", query, orderBy, limit);
         });
     }
 
