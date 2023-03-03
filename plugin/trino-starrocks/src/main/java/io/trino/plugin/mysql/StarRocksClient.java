@@ -274,10 +274,10 @@ public class StarRocksClient
                 "  NULL TYPE_SCHEM," +
                 "  NULL TYPE_NAME," +
                 "  NULL SELF_REFERENCING_COL_NAME," +
-                "  NULL REF_GENERATION" +
-                "FROM" +
-                "  INFORMATION_SCHEMA.TABLES" +
-                "WHERE 1=1 " +
+                "  NULL REF_GENERATION " +
+                "  FROM " +
+                "  INFORMATION_SCHEMA.TABLES " +
+                "  WHERE 1=1 " +
                 (schemaName.isPresent() ? String.format(" AND TABLE_SCHEMA = '%s' ", schemaName.get()) : "") +
                 (tableName.isPresent() ? String.format(" AND TABLE_NAME = '%s' ", tableName.get()) : "");
         log.debug("starRocks metadata sql=%s", sql);
