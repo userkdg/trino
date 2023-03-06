@@ -163,8 +163,7 @@
             <unpack />
         </artifact>
     </artifactSet>
-
-    <artifactSet to="plugin/phoenix5">
+    <artifactSet to="plugin/phoenix5.0">
         <artifact id="${project.groupId}:trino-phoenix5.0:zip:${project.version}">
             <unpack />
         </artifact>
