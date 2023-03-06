@@ -442,8 +442,10 @@ jobs:
             !:trino-mariadb,
             !:trino-mongodb,
             !:trino-mysql,
+            !:trino-starrocks,
             !:trino-oracle,
             !:trino-phoenix5,
+            !:trino-phoenix5.0,
             !:trino-pinot,
             !:trino-postgresql,
             !:trino-raptor-legacy,
@@ -537,6 +539,7 @@ jobs:
             - { modules: plugin/trino-mysql }
             - { modules: plugin/trino-oracle }
             - { modules: plugin/trino-phoenix5 }
+            - { modules: plugin/trino-phoenix5.0 }
             - { modules: plugin/trino-pinot }
             - { modules: plugin/trino-postgresql }
             - { modules: plugin/trino-raptor-legacy }
