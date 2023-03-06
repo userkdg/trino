@@ -793,12 +793,12 @@ public class StarRocksClient
                 String columnName = column.getColumnName();
                 TableStatisticV1 tableStatisticV1 = tableStatisticV1Map.get(columnName);
                 if (tableStatisticV1 != null) {
+                    rowCount = Math.max(rowCount, tableStatisticV1.rowCount());
                     columnStatisticsBuilder.setDataSize(Estimate.of(tableStatisticV1.dataSize()));
                     columnStatisticsBuilder.setDistinctValuesCount(Estimate.of(tableStatisticV1.distinctCount()));
-                    columnStatisticsBuilder.setNullsFraction(Estimate.of(tableStatisticV1.nullCount()));
+                    columnStatisticsBuilder.setNullsFraction(Estimate.of(rowCount <= 0 ? 0 : (tableStatisticV1.nullCount() * 1.0 / rowCount)));
                     // varcharType will miss.
                     columnStatisticsBuilder.setRange(DoubleRange.from(column.getColumnType(), tableStatisticV1.min(), tableStatisticV1.max()));
-                    rowCount = Math.max(rowCount, tableStatisticV1.rowCount());
                 }
                 tableStatistics.setColumnStatistics(column, columnStatisticsBuilder.build());
             }
@@ -838,19 +838,20 @@ public class StarRocksClient
 
         public ImmutableMap<String, TableStatisticV1> getTableStatisticV1(JdbcTableHandle table) {
             RemoteTableName remoteTableName = table.getRequiredNamedRelation().getRemoteTableName();
-            return handle.createQuery("select" +
-                            "db_name," +
-                            "table_name," +
-                            "column_name," +
-                            "row_count," +
-                            "data_size," +
-                            "distinct_count," +
-                            "null_count," +
-                            "min," +
-                            "max" +
-                            "from _statistics_.table_statistic_v1 " +
+            log.debug("remoteTableName=%s", remoteTableName.toString());
+            return handle.createQuery("select " +
+                            " db_name," +
+                            " table_name," +
+                            " column_name," +
+                            " row_count," +
+                            " data_size," +
+                            " distinct_count," +
+                            " null_count," +
+                            " min," +
+                            " max " +
+                            " from _statistics_.table_statistic_v1 " +
                             " where table_name = :db_table_name ")
-                    .bind("db_table_name", String.format("%s.%s", remoteTableName.getSchemaName().orElse(""), remoteTableName.getTableName()))
+                    .bind("db_table_name", String.format("%s.%s", remoteTableName.getCatalogName().orElse(""), remoteTableName.getTableName()))
                     .map((rs, ctx) -> new TableStatisticV1(
                             rs.getString("db_name"),
                             rs.getString("table_name"),
