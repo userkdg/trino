@@ -16,6 +16,7 @@ package io.trino.plugin.phoenix;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.airlift.log.Logger;
 import io.trino.plugin.jdbc.*;
 import io.trino.plugin.jdbc.logging.RemoteQueryModifier;
 import io.trino.plugin.jdbc.mapping.IdentifierMapping;
@@ -114,6 +115,7 @@ import static org.apache.phoenix.util.SchemaUtil.getEscapedArgument;
 public class PhoenixClient
         extends BaseJdbcClient
 {
+    private static final Logger log = Logger.get(PhoenixClient.class);
     private static final String ROWKEY = "ROWKEY";
 
     private static final String DATE_FORMAT = "y-MM-dd G";
@@ -586,7 +588,7 @@ public class PhoenixClient
 
         try (Connection connection = connectionFactory.openConnection(session);
                 Admin admin = connection.unwrap(PhoenixConnection.class).getQueryServices().getAdmin()) {
-            String schemaName = toPhoenixSchemaName(remoteTableName.getSchemaName().orElse(null));
+            String schemaName = toPhoenixSchemaName(remoteTableName.getSchemaName().orElse(DEFAULT_SCHEMA));
             PTable table = getTable(connection, SchemaUtil.getTableName(schemaName, remoteTableName.getTableName()));
 
             boolean salted = table.getBucketNum() != null;
@@ -642,9 +644,12 @@ public class PhoenixClient
         }
         catch (org.apache.phoenix.schema.TableNotFoundException e) {
             // Rethrow as Trino TableNotFoundException to suppress the exception during listing information_schema
-            throw new io.trino.spi.connector.TableNotFoundException(new SchemaTableName(remoteTableName.getSchemaName().orElse(null), remoteTableName.getTableName()));
+            SchemaTableName schemaTableName = new SchemaTableName(remoteTableName.getSchemaName().orElse(DEFAULT_SCHEMA), remoteTableName.getTableName());
+            log.error("remoteTableName=%s, schemaTableName=%s", remoteTableName.toString(), schemaTableName);
+            throw new io.trino.spi.connector.TableNotFoundException(schemaTableName);
         }
         catch (IOException | SQLException e) {
+            log.error("remoteTableName=%s", remoteTableName.toString());
             throw new TrinoException(PHOENIX_METADATA_ERROR, "Couldn't get Phoenix table properties", e);
         }
         return properties.buildOrThrow();
