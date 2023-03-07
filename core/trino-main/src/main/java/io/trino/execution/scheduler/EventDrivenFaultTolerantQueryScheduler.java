@@ -766,7 +766,7 @@ public class EventDrivenFaultTolerantQueryScheduler
                         session,
                         summarizeTaskInfo,
                         nodeTaskMap,
-                        queryExecutor,
+                        queryStateMachine.getStateMachineExecutor(),
                         schedulerStats);
                 closer.register(stage::abort);
                 stageRegistry.add(stage);
@@ -802,7 +802,7 @@ public class EventDrivenFaultTolerantQueryScheduler
                         stage::recordGetSplitTime,
                         outputDataSizeEstimates.buildOrThrow()));
 
-                FaultTolerantPartitioningScheme sinkPartitioningScheme = partitioningSchemeFactory.get(fragment.getPartitioningScheme().getPartitioning().getHandle());
+                FaultTolerantPartitioningScheme sinkPartitioningScheme = partitioningSchemeFactory.get(fragment.getOutputPartitioningScheme().getPartitioning().getHandle());
                 ExchangeContext exchangeContext = new ExchangeContext(queryStateMachine.getQueryId(), new ExchangeId("external-exchange-" + stage.getStageId().getId()));
 
                 boolean preserveOrderWithinPartition = rootFragment && stage.getFragment().getPartitioning().equals(SINGLE_DISTRIBUTION);

@@ -13,11 +13,12 @@
  */
 package io.trino.plugin.hive;
 
+import io.trino.filesystem.SeekableInputStream;
 import io.trino.filesystem.TrinoInput;
 import io.trino.filesystem.TrinoInputFile;
-import org.apache.iceberg.io.SeekableInputStream;
 
 import java.io.IOException;
+import java.time.Instant;
 
 import static java.util.Objects.requireNonNull;
 
@@ -41,6 +42,13 @@ public class MonitoredTrinoInputFile
     }
 
     @Override
+    public SeekableInputStream newStream()
+            throws IOException
+    {
+        return new MonitoredSeekableInputStream(stats, delegate.newStream());
+    }
+
+    @Override
     public long length()
             throws IOException
     {
@@ -48,10 +56,10 @@ public class MonitoredTrinoInputFile
     }
 
     @Override
-    public long modificationTime()
+    public Instant lastModified()
             throws IOException
     {
-        return delegate.modificationTime();
+        return delegate.lastModified();
     }
 
     @Override
@@ -86,12 +94,6 @@ public class MonitoredTrinoInputFile
         }
 
         @Override
-        public SeekableInputStream inputStream()
-        {
-            return new MonitoredSeekableInputStream(stats, delegate.inputStream());
-        }
-
-        @Override
         public void readFully(long position, byte[] buffer, int bufferOffset, int bufferLength)
                 throws IOException
         {
@@ -116,6 +118,12 @@ public class MonitoredTrinoInputFile
         {
             delegate.close();
         }
+
+        @Override
+        public String toString()
+        {
+            return delegate.toString();
+        }
     }
 
     private static final class MonitoredSeekableInputStream
@@ -131,17 +139,17 @@ public class MonitoredTrinoInputFile
         }
 
         @Override
-        public long getPos()
+        public long getPosition()
                 throws IOException
         {
-            return delegate.getPos();
+            return delegate.getPosition();
         }
 
         @Override
-        public void seek(long newPos)
+        public void seek(long position)
                 throws IOException
         {
-            delegate.seek(newPos);
+            delegate.seek(position);
         }
 
         @Override
