@@ -10,7 +10,7 @@
 
     <groupId>io.trino</groupId>
     <artifactId>trino-root</artifactId>
-    <version>410-SNAPSHOT</version>
+    <version>408</version>
 
     <name>trino-root</name>
     <description>Trino</description>
@@ -46,12 +46,10 @@
 
         <air.release.preparation-goals>clean verify -DskipTests</air.release.preparation-goals>
 
-        <dep.slice.version>0.45</dep.slice.version>
-        <dep.accumulo.version>1.10.2</dep.accumulo.version>
+        <dep.accumulo.version>1.7.4</dep.accumulo.version>
         <dep.accumulo-hadoop.version>2.7.7-1</dep.accumulo-hadoop.version>
         <dep.antlr.version>4.11.1</dep.antlr.version>
-        <!-- TODO remove after updating Airbase -->
-        <dep.airlift.version>225</dep.airlift.version>
+        <dep.airlift.version>223</dep.airlift.version>
         <dep.arrow.version>9.0.0</dep.arrow.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.aws-sdk.version>1.12.261</dep.aws-sdk.version>
@@ -75,7 +73,7 @@
         <dep.wire.version>3.2.2</dep.wire.version>
         <dep.kotlin.version>1.4.0</dep.kotlin.version>
 
-        <dep.docker.images.version>77</dep.docker.images.version>
+        <dep.docker.images.version>76</dep.docker.images.version>
 
         <!--
           America/Bahia_Banderas has:
@@ -113,7 +111,7 @@
         <module>core/trino-server-main</module>
         <module>core/trino-server-rpm</module>
         <module>core/trino-spi</module>
-        <module>docs</module>
+<!--        <module>docs</module>-->
         <module>lib/trino-array</module>
         <module>lib/trino-collect</module>
         <module>lib/trino-filesystem</module>
@@ -162,9 +160,11 @@
         <module>plugin/trino-mongodb</module>
         <module>plugin/trino-mysql</module>
         <module>plugin/trino-mysql-event-listener</module>
+        <module>plugin/trino-neo4j</module>
         <module>plugin/trino-oracle</module>
         <module>plugin/trino-password-authenticators</module>
         <module>plugin/trino-phoenix5</module>
+        <module>plugin/trino-phoenix5.0</module>
         <module>plugin/trino-pinot</module>
         <module>plugin/trino-postgresql</module>
         <module>plugin/trino-prometheus</module>
@@ -175,6 +175,7 @@
         <module>plugin/trino-session-property-managers</module>
         <module>plugin/trino-singlestore</module>
         <module>plugin/trino-sqlserver</module>
+        <module>plugin/trino-starrocks</module>
         <module>plugin/trino-teradata-functions</module>
         <module>plugin/trino-thrift</module>
         <module>plugin/trino-thrift-api</module>
@@ -393,12 +394,6 @@
 
             <dependency>
                 <groupId>io.trino</groupId>
-                <artifactId>trino-ignite</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.trino</groupId>
                 <artifactId>trino-jdbc</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -475,6 +470,12 @@
             <dependency>
                 <groupId>io.trino</groupId>
                 <artifactId>trino-mysql</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.trino</groupId>
+                <artifactId>trino-neo4j</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -820,7 +821,7 @@
             <dependency>
                 <groupId>io.airlift</groupId>
                 <artifactId>aircompressor</artifactId>
-                <version>0.22</version>
+                <version>0.21</version>
             </dependency>
 
             <dependency>
@@ -928,12 +929,6 @@
             <dependency>
                 <groupId>io.airlift</groupId>
                 <artifactId>node</artifactId>
-                <version>${dep.airlift.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.airlift</groupId>
-                <artifactId>openmetrics</artifactId>
                 <version>${dep.airlift.version}</version>
             </dependency>
 
@@ -1149,7 +1144,7 @@
             <dependency>
                 <groupId>com.clickhouse</groupId>
                 <artifactId>clickhouse-jdbc</artifactId>
-                <version>0.4.1</version>
+                <version>0.3.2-patch3</version>
                 <classifier>all</classifier>
                 <exclusions>
                     <exclusion>
@@ -1247,7 +1242,7 @@
             <dependency>
                 <groupId>com.h2database</groupId>
                 <artifactId>h2</artifactId>
-                <version>2.1.214</version>
+                <version>1.4.200</version>
             </dependency>
 
             <dependency>
@@ -1375,12 +1370,6 @@
                 <artifactId>re2j-td</artifactId>
                 <version>1.4</version>
             </dependency>
-
-            <dependency>
-                 <groupId>commons-codec</groupId>
-                 <artifactId>commons-codec</artifactId>
-                 <version>1.15</version>
-             </dependency>
 
             <dependency>
                 <groupId>dev.failsafe</groupId>
@@ -1701,6 +1690,18 @@
                         <groupId>org.apache.avro</groupId>
                         <artifactId>avro</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-api</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.iceberg</groupId>
+                <artifactId>iceberg-hive-metastore</artifactId>
+                <version>${dep.iceberg.version}</version>
+                <exclusions>
                     <exclusion>
                         <groupId>org.slf4j</groupId>
                         <artifactId>slf4j-api</artifactId>
@@ -2059,6 +2060,14 @@
                             </bannedDependencies>
                         </rules>
                     </configuration>
+                    <executions>
+                        <execution>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>enforce</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                     <dependencies>
                         <dependency>
                             <groupId>com.github.ferstl</groupId>
@@ -2363,7 +2372,7 @@
                     <plugin>
                         <groupId>io.github.gitflow-incremental-builder</groupId>
                         <artifactId>gitflow-incremental-builder</artifactId>
-                        <version>4.1.1</version>
+                        <version>4.4.0</version>
                         <extensions>true</extensions>
                         <configuration>
                             <disableIfBranchMatches>master</disableIfBranchMatches>

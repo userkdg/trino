@@ -439,8 +439,11 @@ jobs:
             !:trino-mariadb,
             !:trino-mongodb,
             !:trino-mysql,
+            !:trino-neo4j,
+            !:trino-starrocks,
             !:trino-oracle,
             !:trino-phoenix5,
+            !:trino-phoenix5.0,
             !:trino-pinot,
             !:trino-postgresql,
             !:trino-raptor-legacy,
@@ -532,14 +535,17 @@ jobs:
             - { modules: plugin/trino-mariadb }
             - { modules: plugin/trino-mongodb }
             - { modules: plugin/trino-mysql }
+            - { modules: plugin/trino-neo4j }
             - { modules: plugin/trino-oracle }
             - { modules: plugin/trino-phoenix5 }
+            - { modules: plugin/trino-phoenix5.0 }
             - { modules: plugin/trino-pinot }
             - { modules: plugin/trino-postgresql }
             - { modules: plugin/trino-raptor-legacy }
             - { modules: plugin/trino-redis }
             - { modules: plugin/trino-singlestore }
             - { modules: plugin/trino-sqlserver }
+            - { modules: plugin/trino-starrocks }
             - { modules: testing/trino-faulttolerant-tests, profile: default }
             - { modules: plugin/trino-delta-lake, profile: fte-tests }
             - { modules: testing/trino-faulttolerant-tests, profile: test-fault-tolerant-delta }
@@ -550,7 +556,9 @@ jobs:
             - { modules: plugin/trino-postgresql, profile: fte-tests }
             - { modules: plugin/trino-mongodb, profile: fte-tests }
             - { modules: plugin/trino-mysql, profile: fte-tests }
+            - { modules: plugin/trino-neo4j, profile: fte-tests }
             - { modules: plugin/trino-sqlserver, profile: fte-tests }
+            - { modules: plugin/trino-starrocks, profile: fte-tests }
             - { modules: testing/trino-tests }
           EOF
           ./.github/bin/build-matrix-from-impacted.py -v -i gib-impacted.log -m .github/test-matrix.yaml -o matrix.json
